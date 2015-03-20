@@ -1,3 +1,6 @@
 puzzles/
 
+robozzle_ml
+*.cm[iox]
+*.o
 *.pdf

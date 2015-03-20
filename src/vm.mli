@@ -37,7 +37,7 @@ val step: state -> state
 
 val is_solved: state -> bool
 val is_out_of_map: state -> bool
-val is_out_of_instr: state -> bool
+val is_out_of_instruction: state -> bool
 
 val get_pos: state -> pos
 val get_map: state -> Puzzle.map

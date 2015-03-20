@@ -1,22 +1,21 @@
-OC := ocamlfind ocamlc
-OL := ocamlfind ocamlc
+OC := ocamlfind ocamlopt
+OL := ocamlfind ocamlopt
 
+TRGT := robozzle_ml
 SRCDIR := src
-LIBS := sdl,sdl.sdlgfx,sdl.sdlimage,sdl.sdlttf
+LIBS := str,sdl,sdl.sdlgfx,sdl.sdlimage,sdl.sdlttf
+INTF := puzzle.cmi graphics.cmi
 
-all: robozzle-ml
+all: $(TRGT)
 
-robozzle-ml: puzzle.cmo graphics.cmo main.cmo
+$(TRGT): puzzle.cmx graphics.cmx main.cmx
 	$(OL) -o $@ -package $(LIBS) -linkpkg $^
 
-%.cmo: $(SRCDIR)/%.ml
-	$(OC) -package $(LIBS) -c $<
+%.cmx: $(SRCDIR)/%.ml $(INTF)
+	$(OC) -o $@ -package $(LIBS) -c $<
 
 %.cmi: $(SRCDIR)/%.mli
-	$(OC) -package $(LIBS) -c %<
+	$(OC) -o $@ -package $(LIBS) -c $<
 
 clean:
-	rm *.cmi *.cmo
-
-cleanall: clean
-	rm $(TARGET)
+	rm *.cm[iox]
