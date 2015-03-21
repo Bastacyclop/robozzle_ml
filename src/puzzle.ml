@@ -32,15 +32,15 @@ type t = {
 
 let split = Str.split (Str.regexp ",")
 
-let parse_direction str =
-    match int_of_string str with
+let decode_direction line =
+    match int_of_string line with
     | 0 -> East
     | 1 -> South
     | 2 -> West
     | 3 -> North
     | _ -> failwith "unknown direction encoding"
 
-let cell_of_char c =
+let decode_cell c =
     match c with
     | '.' -> { color = None; star = false; }
     | 'r' -> { color = Some Red; star = false; }
@@ -57,8 +57,9 @@ let parse file_path =
     let width = int_of_string (input_line f) in
     let height = int_of_string (input_line f) in
     let spawn_column = int_of_string (input_line f) in
-    let spawn_row = int_of_string (input_line f) in
-    let spawn_dir = parse_direction (input_line f) in
+    let spawn_line = int_of_string (input_line f) in
+    Printf.printf "spawn: %d, %d\n" spawn_line spawn_column;
+    let spawn_dir = decode_direction (input_line f) in
     let allowed_cmds = int_of_string (input_line f) in
     let fun_sizes = split (input_line f)
         |> List.map (fun e -> int_of_string e) in
@@ -66,22 +67,23 @@ let parse file_path =
     close_in f;
 
     let cells = ref [] in
-    for l = 0 to (height - 1) do
-        for c = 0 to (width - 1) do
+    for l = (height - 1) downto 0 do
+        for c = (width - 1) downto 0 do
             let i = l*width + c in
             let c = String.get cells_str i in
-            cells := (cell_of_char c)::!cells
+            cells := (decode_cell c)::!cells
         done
     done;
+    let cells = !cells in
 
     {
         title;
-        spawn = (spawn_row, spawn_column);
+        spawn = (spawn_line, spawn_column);
         spawn_dir;
         fun_sizes;
         map = {
             width;
             height;
-            cells = !cells;
+            cells;
         };
     }

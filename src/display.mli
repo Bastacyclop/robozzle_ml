@@ -2,7 +2,7 @@ type position = int * int
 
 (* init window_width window_height cellule_size *)
 val init: int -> int -> int -> unit
-val quit: unit -> unit
+val close: unit -> unit
 val clear: unit -> unit
 
 val draw_cell: position -> Puzzle.color option -> unit

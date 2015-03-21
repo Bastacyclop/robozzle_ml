@@ -43,7 +43,7 @@ let init width height c_size =
   font := Sdlttf.open_font font_path 50
 
 
-let quit () =
+let close () =
   Sdl.quit ()
 
 let clear () =
@@ -123,9 +123,9 @@ let draw_text ((x,y): position) (s: string) =
     ~dst:!screen
     ~dst_rect:(Sdlvideo.rect x y 0 0)
     ()
-    
+
 let sync () =
   Sdlvideo.flip !screen
 
-let delay (u: int) =
-  Sdltimer.delay u
+let delay ms =
+  Sdltimer.delay ms
