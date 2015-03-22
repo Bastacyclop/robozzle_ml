@@ -32,8 +32,8 @@ type t = {
 
 let split = Str.split (Str.regexp ",")
 
-let decode_direction line =
-    match int_of_string line with
+let decode_direction str =
+    match int_of_string str with
     | 0 -> East
     | 1 -> South
     | 2 -> West
@@ -53,14 +53,14 @@ let decode_cell c =
 
 let parse file_path =
     let f = open_in file_path in
+    let read_number () = int_of_string (input_line f) in
     let title = input_line f in
-    let width = int_of_string (input_line f) in
-    let height = int_of_string (input_line f) in
-    let spawn_column = int_of_string (input_line f) in
-    let spawn_line = int_of_string (input_line f) in
-    Printf.printf "spawn: %d, %d\n" spawn_line spawn_column;
+    let width = read_number () in
+    let height = read_number () in
+    let spawn_column = read_number () in
+    let spawn_line = read_number () in
     let spawn_dir = decode_direction (input_line f) in
-    let allowed_cmds = int_of_string (input_line f) in
+    let allowed_cmds = read_number () in
     let fun_sizes = split (input_line f)
         |> List.map (fun e -> int_of_string e) in
     let cells_str = input_line f in

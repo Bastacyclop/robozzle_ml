@@ -1,6 +1,6 @@
 type position = int * int
 
-(* init window_width window_height cellule_size *)
+(* init window_width window_height cell_size *)
 val init: int -> int -> int -> unit
 val close: unit -> unit
 val clear: unit -> unit

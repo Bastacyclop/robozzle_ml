@@ -27,6 +27,7 @@ type state = {
     bytecode : offset instruction IntMap.t;
 }
 
+(* TODO *)
 let string_of_instruction f instr = "instruction"
 
 let get_cell (l, c) (map: Puzzle.map): Puzzle.cell =
@@ -67,21 +68,21 @@ let init puzzle =
 let set_bytecode bytecode state =
     { state with bytecode; }
 
+(* TODO *)
 let init_stack id state = state
 
+(* TODO *)
 let step state = state
 
 let is_solved state =
-    let rec iter i (cells: Puzzle.cell list) =
-        if i = 0 then true
-        else match cells with
-        | [] -> failwith "cell out of bounds"
+    let rec iter (cells: Puzzle.cell list) =
+        match cells with
+        | [] -> true
         | h::t ->
             if h.star then false
-            else iter (i - 1) t
+            else iter t
     in
-    let m = state.map in
-    iter (m.width*m.height) m.cells
+    iter state.map.cells
 
 let is_out_of_map (state: state) =
     let m = state.map in
@@ -123,9 +124,12 @@ let draw offx offy cell_size state anim_steps anim_frame =
                 iter_l (i - 1) cells
         in iter_l state.map.height state.map.cells
     in
+    let draw_robot () =
+        let (rl, rc) = state.position in
+        let rx = offx + rc*cell_size in
+        let ry = offy + rl*cell_size in
+        Display.draw_robot (rx, ry) state.direction 0;
+    in
     draw_cells ();
-    let (rl, rc) = state.position in
-    let rx = offx + rc*cell_size in
-    let ry = offy + rl*cell_size in
-    Display.draw_robot (rx, ry) state.direction 0;
+    draw_robot ();
     Display.sync ()
