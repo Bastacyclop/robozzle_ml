@@ -24,7 +24,7 @@ type map = {
 
 type t = {
     title: string;
-    spawn: position;
+    spawn_pos: position;
     spawn_dir: direction;
     fun_sizes: int list;
     map: map;
@@ -78,7 +78,7 @@ let parse file_path =
 
     {
         title;
-        spawn = (spawn_line, spawn_column);
+        spawn_pos = (spawn_line, spawn_column);
         spawn_dir;
         fun_sizes;
         map = {
@@ -87,3 +87,26 @@ let parse file_path =
             cells;
         };
     }
+
+let string_of_position (x, y) =
+    "(" ^ (string_of_int x) ^ ", " ^ (string_of_int y) ^ ")"
+
+let string_of_direction dir =
+    match dir with
+    | East -> "East"
+    | North -> "North"
+    | West -> "West"
+    | South -> "South"
+
+let string_of_color c =
+    match c with
+    | Red -> "Red"
+    | Green -> "Green"
+    | Blue -> "Blue"
+
+let string_of_cell cell =
+    match cell.color with
+    | None -> "Empty"
+    | Some c -> string_of_color c
+    ^ if cell.star then "*" else ""
+    ^ " Cell"

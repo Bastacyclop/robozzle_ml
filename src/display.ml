@@ -15,11 +15,11 @@ let font = ref (Obj.magic None)
 
 let init width height c_size =
     Sdl.init [`VIDEO];
-    screen := Sdlvideo.set_video_mode ~w:width ~h:height ~bpp:32
+    screen := Sdlvideo.set_video_mode ~w: width ~h: height ~bpp: 32
                                       [`DOUBLEBUF; `HWSURFACE];
     cell_size := c_size;
     sprites := Sdlvideo.create_RGB_surface_format !screen [`HWSURFACE]
-                                                  ~w:(5 * c_size) ~h:(5 * c_size);
+                                                  ~w: (5 * c_size) ~h: (5 * c_size);
     let imgs = Sdlloader.load_image sprites_path in
     let imgs = Sdlgfx.zoomSurface imgs
                                   ((float_of_int c_size) /. 32.)
@@ -27,19 +27,19 @@ let init width height c_size =
                                   true
     in
     Sdlvideo.blit_surface
-        ~src:imgs
-        ~src_rect:(Sdlvideo.rect 0 0 (5 * c_size) (5 * c_size))
-        ~dst:!sprites
-        ~dst_rect:(Sdlvideo.rect 0 0 (5 * c_size) (5 * c_size))
+        ~src: imgs
+        ~src_rect: (Sdlvideo.rect 0 0 (5 * c_size) (5 * c_size))
+        ~dst: !sprites
+        ~dst_rect: (Sdlvideo.rect 0 0 (5 * c_size) (5 * c_size))
         ();
     Sdlvideo.set_color_key !sprites (Sdlvideo.map_RGB !sprites (82, 123, 156));
     sprites_lang := Sdlloader.load_image lang_sprites_path;
     Sdlvideo.set_color_key !sprites_lang 
                            (Sdlvideo.map_RGB !sprites_lang (82, 123, 156));
     sprite_cursor := Sdlvideo.create_RGB_surface_format !screen [`HWSURFACE]
-                                                        ~w:36 ~h:36;
+                                                        ~w: 36 ~h: 36;
     Sdlvideo.fill_rect
-        ~rect:(Sdlvideo.rect 0 0 36 36)
+        ~rect: (Sdlvideo.rect 0 0 36 36)
         !sprite_cursor
         (Sdlvideo.map_RGB !sprite_cursor Sdlvideo.yellow);
     Sdlttf.init ();
@@ -53,26 +53,27 @@ let clear () =
 
 let blit_sprite ((x,y): position) (idx: int) (idy: int) =
     Sdlvideo.blit_surface
-        ~src:!sprites
-        ~src_rect:(Sdlvideo.rect (idx * !cell_size) (idy * !cell_size)
-                                 !cell_size !cell_size)
-        ~dst:!screen
-        ~dst_rect:(Sdlvideo.rect x y !cell_size !cell_size)
+        ~src: !sprites
+        ~src_rect: (Sdlvideo.rect (idx * !cell_size) (idy * !cell_size)
+                                  !cell_size !cell_size)
+        ~dst: !screen
+        ~dst_rect: (Sdlvideo.rect x y !cell_size !cell_size)
         ()
 
 let draw_cell (pos: position) (color: (Puzzle.color option)) =
-    match color with
-    | Some Puzzle.Blue  -> blit_sprite pos 0 0
-    | Some Puzzle.Red   -> blit_sprite pos 1 0
-    | Some Puzzle.Green -> blit_sprite pos 2 0
+    Puzzle.(match color with
+    | Some Blue  -> blit_sprite pos 0 0
+    | Some Red   -> blit_sprite pos 1 0
+    | Some Green -> blit_sprite pos 2 0
     | None -> blit_sprite pos 3 0
+    )
 
 let draw_cursor ((x,y): position) =
     Sdlvideo.blit_surface
-        ~src:!sprite_cursor
-        ~src_rect:(Sdlvideo.rect 0 0 36 36)
-        ~dst:!screen
-        ~dst_rect:(Sdlvideo.rect x y 36 36)
+        ~src: !sprite_cursor
+        ~src_rect: (Sdlvideo.rect 0 0 36 36)
+        ~dst: !screen
+        ~dst_rect: (Sdlvideo.rect x y 36 36)
         ()
 
 let draw_star (pos: position) =
@@ -84,24 +85,26 @@ let robot_nb_sprites = List.length robot_sprites
 
 let draw_robot (pos: position) (dir: Puzzle.direction) (mstep: int) =
     let sx = List.nth robot_sprites (mstep mod robot_nb_sprites)
-    and sy = match dir with
-        | Puzzle.South -> 1
-        | Puzzle.East  -> 2
-        | Puzzle.North -> 3
-        | Puzzle.West  -> 4
+    and sy = Puzzle.(match dir with
+        | South -> 1
+        | East  -> 2
+        | North -> 3
+        | West  -> 4
+    )
     in blit_sprite pos sx sy
 
 let draw_arrow ((x,y): position) (dir: Puzzle.direction) =
-    let idx = match dir with
-        | Puzzle.North -> 0
-        | Puzzle.West  -> 1
-        | Puzzle.East  -> 2
-        | Puzzle.South -> failwith "should not happen..."
+    let idx = Puzzle.(match dir with
+        | North -> 0
+        | West  -> 1
+        | East  -> 2
+        | South -> failwith "should not happen..."
+    )
     in Sdlvideo.blit_surface
-        ~src:!sprites_lang
-        ~src_rect:(Sdlvideo.rect (idx * 32) 0 32 32)
-        ~dst:!screen
-        ~dst_rect:(Sdlvideo.rect x y 32 32)
+        ~src: !sprites_lang
+        ~src_rect: (Sdlvideo.rect (idx * 32) 0 32 32)
+        ~dst: !screen
+        ~dst_rect: (Sdlvideo.rect x y 32 32)
         ()
 
 let draw_call ((x,y): position) (f: string) =
@@ -113,18 +116,18 @@ let draw_call ((x,y): position) (f: string) =
         | "f5" -> 7
         | _ -> failwith "unknown function name"
     in Sdlvideo.blit_surface
-        ~src:!sprites_lang
-        ~src_rect:(Sdlvideo.rect (idx * 32) 0 32 32)
-        ~dst:!screen
-        ~dst_rect:(Sdlvideo.rect x y 32 32)
+        ~src: !sprites_lang
+        ~src_rect: (Sdlvideo.rect (idx * 32) 0 32 32)
+        ~dst: !screen
+        ~dst_rect: (Sdlvideo.rect x y 32 32)
         ()
 
 let draw_text ((x,y): position) (s: string) =
     let surf = Sdlttf.render_text_solid !font s Sdlvideo.yellow  in
     Sdlvideo.blit_surface
-        ~src:surf
-        ~dst:!screen
-        ~dst_rect:(Sdlvideo.rect x y 0 0)
+        ~src: surf
+        ~dst: !screen
+        ~dst_rect: (Sdlvideo.rect x y 0 0)
         ()
 
 let sync () =

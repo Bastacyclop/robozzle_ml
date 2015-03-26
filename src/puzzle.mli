@@ -24,7 +24,7 @@ type map = {
 
 type t = {
     title: string;
-    spawn: position;
+    spawn_pos: position;
     spawn_dir: direction;
     fun_sizes: int list;
     map: map;
@@ -32,3 +32,8 @@ type t = {
 
 (* parse file_path *)
 val parse: string -> t
+
+val string_of_position: position -> string
+val string_of_direction: direction -> string
+val string_of_color: color -> string
+val string_of_cell: cell -> string

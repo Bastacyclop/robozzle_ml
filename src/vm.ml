@@ -27,10 +27,8 @@ type state = {
     bytecode : offset instruction IntMap.t;
 }
 
-(* TODO *)
-let string_of_instruction f instr = "instruction"
-
 let get_cell (l, c) (map: Puzzle.map): Puzzle.cell =
+    let open Puzzle in
     let rec iter_c c cells =
         if c = 0 then cells
         else match cells with
@@ -46,7 +44,8 @@ let get_cell (l, c) (map: Puzzle.map): Puzzle.cell =
     | h::t -> h
 
 let count_stars (puzzle: Puzzle.t) =
-    let rec iter (cells: Puzzle.cell list) acc =
+    let open Puzzle in
+    let rec iter cells acc =
         match cells with
         | [] -> acc
         | h::t ->
@@ -54,37 +53,35 @@ let count_stars (puzzle: Puzzle.t) =
             iter t acc
     in iter puzzle.map.cells 0
 
-let init puzzle =
+let init (puzzle: Puzzle.t) =
+    let open Printf in
+    let open Puzzle in
+    printf "spawn: %s - %s\n" (string_of_position puzzle.spawn_pos)
+                              (string_of_direction puzzle.spawn_dir);
     {
         offset = 0;
         stars = count_stars puzzle;
         stack = [];
         map = puzzle.map;
-        position = puzzle.spawn;
+        position = puzzle.spawn_pos;
         direction = puzzle.spawn_dir;
         bytecode = IntMap.empty;
     }
 
-let set_bytecode bytecode state =
+let set_bytecode bytecode (state: state) =
     { state with bytecode; }
 
 (* TODO *)
-let init_stack id state = state
+let init_stack id (state: state) = state
 
 (* TODO *)
-let step state = state
+let step (state: state) = state
 
-let is_solved state =
-    let rec iter (cells: Puzzle.cell list) =
-        match cells with
-        | [] -> true
-        | h::t ->
-            if h.star then false
-            else iter t
-    in
-    iter state.map.cells
+let is_solved (state: state) =
+    state.stars = 0
 
 let is_out_of_map (state: state) =
+    let open Puzzle in
     let m = state.map in
     let (l, c) = state.position in
     l < 0 || m.height <= l ||
@@ -95,18 +92,19 @@ let is_out_of_map (state: state) =
         | _ -> false
     )
 
-let is_out_of_instruction state =
+let is_out_of_instruction (state: state) =
     let len = IntMap.cardinal state.bytecode in
     state.offset >= len
 
-let get_pos state = state.position
-let get_map state = state.map
-let get_dir state = state.direction
+let get_pos (state: state) = state.position
+let get_map (state: state) = state.map
+let get_dir (state: state) = state.direction
 
-let draw offx offy cell_size state anim_steps anim_frame =
+let draw offx offy cell_size (state: state) anim_steps anim_frame =
+    let open Puzzle in
     let draw_cells () =
         let pos = ref (offx, offy) in
-        let rec iter_c i (cells: Puzzle.cell list) =
+        let rec iter_c i (cells: cell list) =
             if i = 0 then cells
             else match cells with
             | [] -> failwith "index out of bounds"
@@ -128,8 +126,27 @@ let draw offx offy cell_size state anim_steps anim_frame =
         let (rl, rc) = state.position in
         let rx = offx + rc*cell_size in
         let ry = offy + rl*cell_size in
-        Display.draw_robot (rx, ry) state.direction 0;
+        Display.draw_robot (rx, ry) state.direction 0
     in
     draw_cells ();
     draw_robot ();
     Display.sync ()
+
+let string_of_rotation rot =
+    match rot with
+    | Left -> "Left"
+    | Right -> "Right"
+
+let string_of_instruction f instr =
+    match instr with
+    | Label x -> "Label " ^ (f x)
+    | Move -> "Move"
+    | Rotate rot -> "Rotate " ^ (string_of_rotation rot)
+    | Call x -> "Call " ^ (f x)
+    | TailCall x -> "TailCall " ^ (f x)
+    | Return -> "Return"
+    | SetColor c -> "SetColor " ^ (Puzzle.string_of_color c)
+    | Jump x -> "Jump " ^ (f x)
+    | JumpIfNot (c, x) -> "JumpIfNot " ^ (Puzzle.string_of_color c) ^ " " ^ (f x)
+    | Exit -> "Exit"
+

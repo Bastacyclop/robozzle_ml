@@ -55,8 +55,6 @@ type state = {
     bytecode : offset instruction IntMap.t;
 }
 
-val string_of_instruction: ('a -> string) -> 'a instruction -> string
-
 val init: Puzzle.t -> state
 val set_bytecode: offset instruction IntMap.t -> state -> state
 val init_stack: int -> state -> state
@@ -73,3 +71,6 @@ val get_dir: state -> Puzzle.direction
 
 (* draw offx offy cell_size state anim_steps anim_frame *)
 val draw : int -> int -> int -> state -> int -> int -> unit
+
+val string_of_rotation: rotation -> string
+val string_of_instruction: ('a -> string) -> 'a instruction -> string
