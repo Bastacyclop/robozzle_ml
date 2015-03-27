@@ -1,21 +1,38 @@
-module IntMap = Map.Make(struct type t = int let compare = compare end)
-
 type rotation = Left | Right
+
+let string_of_rotation rot =
+    match rot with
+    | Left  -> "Left"
+    | Right -> "Right"
 
 (* bytecode offset *)
 type offset = int
 
-type 'a instruction =
-    | Label of 'a
+type instruction =
+    | Label of offset
     | Move
     | Rotate of rotation
-    | Call of 'a
-    | TailCall of 'a
+    | Call of offset
+    | TailCall of offset
     | Return
     | SetColor of Puzzle.color
-    | Jump of 'a
-    | JumpIfNot of Puzzle.color * 'a
+    | Jump of offset
+    | JumpIfNot of Puzzle.color * offset
     | Exit
+
+let string_of_instruction instr =
+    let f = string_of_int in
+    match instr with
+    | Label x -> "Label " ^ (f x)
+    | Move -> "Move"
+    | Rotate rot -> "Rotate " ^ (string_of_rotation rot)
+    | Call x -> "Call " ^ (f x)
+    | TailCall x -> "TailCall " ^ (f x)
+    | Return -> "Return"
+    | SetColor c -> "SetColor " ^ (Puzzle.string_of_color c)
+    | Jump x -> "Jump " ^ (f x)
+    | JumpIfNot (c, x) -> "JumpIfNot " ^ (Puzzle.string_of_color c) ^ " " ^ (f x)
+    | Exit -> "Exit"
 
 type state = {
     offset   : offset;
@@ -24,34 +41,21 @@ type state = {
     map      : Puzzle.map;
     position : Puzzle.position;
     direction: Puzzle.direction;
-    bytecode : offset instruction IntMap.t;
+    bytecode : instruction array;
 }
 
-let get_cell (l, c) (map: Puzzle.map): Puzzle.cell =
-    let open Puzzle in
-    let rec iter_c c cells =
-        if c = 0 then cells
-        else match cells with
-        | [] -> failwith "cell out of bounds"
-        | h::t -> iter_c (c - 1) t
-    in
-    let rec iter_l l cells =
-        if l = 0 then cells
-        else iter_l (l - 1) (iter_c map.width cells)
-    in
-    match iter_l l map.cells with
-    | [] -> failwith "cell out of bounds"
-    | h::t -> h
+let get_cell (l, c) (m: Puzzle.map): Puzzle.cell ref =
+    ref Puzzle.(m.cells.(l*m.width + c))
 
 let count_stars (puzzle: Puzzle.t) =
     let open Puzzle in
-    let rec iter cells acc =
-        match cells with
-        | [] -> acc
-        | h::t ->
-            let acc = if h.star then acc + 1 else acc in
-            iter t acc
-    in iter puzzle.map.cells 0
+    let map = puzzle.map in
+    let acc = ref 0 in
+    for i = 0 to (map.width*map.height) - 1 do
+        let e = map.cells.(i) in
+        if e.star then acc := !acc + 1
+    done;
+    !acc
 
 let init (puzzle: Puzzle.t) =
     let open Printf in
@@ -65,7 +69,7 @@ let init (puzzle: Puzzle.t) =
         map = puzzle.map;
         position = puzzle.spawn_pos;
         direction = puzzle.spawn_dir;
-        bytecode = IntMap.empty;
+        bytecode = [||];
     }
 
 let set_bytecode bytecode (state: state) =
@@ -74,8 +78,65 @@ let set_bytecode bytecode (state: state) =
 (* TODO *)
 let init_stack id (state: state) = state
 
-(* TODO *)
-let step (state: state) = state
+let move dir (l, c) =
+    let open Puzzle in
+    match dir with
+    | East  -> (l, c + 1)
+    | South -> (l + 1, c)
+    | West  -> (l, c - 1)
+    | North -> (l - 1, c)
+
+let rotate rot dir =
+    let open Puzzle in
+    match rot with
+    | Left  -> (
+        match dir with
+        | East  -> North
+        | South -> East
+        | West  -> South
+        | North -> West
+    )
+    | Right -> (
+        match dir with
+        | East  -> South
+        | South -> West
+        | West  -> North
+        | North -> East
+    )
+
+let step (state: state) =
+    let open Puzzle in
+    let instr = Array.get state.bytecode state.offset in
+    Printf.printf "%d: %s\n" state.offset (string_of_instruction instr);
+    match instr with
+    | Move -> { state with
+        position = move state.direction state.position;
+        offset = state.offset + 1;
+    }
+    | Rotate rot -> { state with
+        direction = rotate rot state.direction;
+        offset = state.offset + 1;
+    }
+    | Call offset -> { state with offset; stack = state.offset::state.stack; }
+    | TailCall offset -> { state with offset; }
+    | Return -> (
+        match state.stack with
+        | [] -> failwith "empty stack on return"
+        | offset::stack -> { state with offset; stack; }
+    )
+    | SetColor color ->
+        let cell = get_cell state.position state.map in
+        cell := { !cell with color = Some color; };
+        { state with offset = state.offset + 1 }
+    | Jump offset -> { state with offset; }
+    | JumpIfNot (color, offset) ->
+        let cell = !(get_cell state.position state.map) in
+        let offset = if cell.color <> Some color then offset
+                     else state.offset + 1
+        in { state with offset; }
+    | Exit -> failwith "exit"
+    | Label _ -> failwith "label"
+
 
 let is_solved (state: state) =
     state.stars = 0
@@ -86,14 +147,14 @@ let is_out_of_map (state: state) =
     let (l, c) = state.position in
     l < 0 || m.height <= l ||
     c < 0 || m.width  <= c || (
-        let c = get_cell (l, c) m in
+        let c = !(get_cell (l, c) m) in
         match c.color with
         | None -> true
         | _ -> false
     )
 
 let is_out_of_instruction (state: state) =
-    let len = IntMap.cardinal state.bytecode in
+    let len = Array.length state.bytecode in
     state.offset >= len
 
 let get_pos (state: state) = state.position
@@ -104,23 +165,15 @@ let draw offx offy cell_size (state: state) anim_steps anim_frame =
     let open Puzzle in
     let draw_cells () =
         let pos = ref (offx, offy) in
-        let rec iter_c i (cells: cell list) =
-            if i = 0 then cells
-            else match cells with
-            | [] -> failwith "index out of bounds"
-            | h::t ->
-                Display.draw_cell !pos h.color;
-                if h.star then Display.draw_star !pos;
+        for l = 0 to state.map.height - 1 do
+            for c = 0 to state.map.width - 1 do
+                let e = !(get_cell (l, c) state.map) in
+                Display.draw_cell !pos e.color;
+                if e.star then Display.draw_star !pos;
                 let (x, y) = !pos in pos := ((x + cell_size), y);
-                iter_c (i - 1) t
-        in
-        let rec iter_l i cells =
-            if i = 0 then ()
-            else
-                let cells = iter_c state.map.width cells in
-                let (x, y) = !pos in pos := (0, (y + cell_size));
-                iter_l (i - 1) cells
-        in iter_l state.map.height state.map.cells
+            done;
+            let (x, y) = !pos in pos := (0, (y + cell_size));
+        done;
     in
     let draw_robot () =
         let (rl, rc) = state.position in
@@ -131,22 +184,3 @@ let draw offx offy cell_size (state: state) anim_steps anim_frame =
     draw_cells ();
     draw_robot ();
     Display.sync ()
-
-let string_of_rotation rot =
-    match rot with
-    | Left -> "Left"
-    | Right -> "Right"
-
-let string_of_instruction f instr =
-    match instr with
-    | Label x -> "Label " ^ (f x)
-    | Move -> "Move"
-    | Rotate rot -> "Rotate " ^ (string_of_rotation rot)
-    | Call x -> "Call " ^ (f x)
-    | TailCall x -> "TailCall " ^ (f x)
-    | Return -> "Return"
-    | SetColor c -> "SetColor " ^ (Puzzle.string_of_color c)
-    | Jump x -> "Jump " ^ (f x)
-    | JumpIfNot (c, x) -> "JumpIfNot " ^ (Puzzle.string_of_color c) ^ " " ^ (f x)
-    | Exit -> "Exit"
-

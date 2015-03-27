@@ -1,25 +1,31 @@
 type position = int * int
+val string_of_position: position -> string
 
 type direction =
     | East
     | North
     | West
     | South
+val string_of_direction: direction -> string
 
 type color =
     | Red
     | Green
     | Blue
+val string_of_color: color -> string
 
 type cell = {
     color: color option;
     star: bool;
 }
+val empty_cell: cell
+val string_of_cell: cell -> string
+
 
 type map = {
     width: int;
     height: int;
-    cells: cell list;
+    cells: cell array;
 }
 
 type t = {
@@ -32,8 +38,3 @@ type t = {
 
 (* parse file_path *)
 val parse: string -> t
-
-val string_of_position: position -> string
-val string_of_direction: direction -> string
-val string_of_color: color -> string
-val string_of_cell: cell -> string
