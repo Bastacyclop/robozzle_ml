@@ -44,8 +44,13 @@ type state = {
     bytecode : instruction array;
 }
 
-let get_cell (l, c) (m: Puzzle.map): Puzzle.cell ref =
-    ref Puzzle.(m.cells.(l*m.width + c))
+let cell_index (l, c) m = Puzzle.(l*m.width + c)
+
+let get_cell (l, c) (m: Puzzle.map): Puzzle.cell =
+    Puzzle.(m.cells.(cell_index (l, c) m))
+
+let set_cell v (l, c) (m: Puzzle.map) =
+    Puzzle.(m.cells.(cell_index (l, c) m) <- v)
 
 let count_stars (puzzle: Puzzle.t) =
     let open Puzzle in
@@ -104,15 +109,23 @@ let rotate rot dir =
         | North -> East
     )
 
+let may_collect_star position (state: state) =
+    let open Puzzle in
+    let cell = get_cell position state.map in
+    if cell.star then (
+        set_cell { cell with star = false; } position state.map;
+        state.stars - 1
+    ) else state.stars
+
 let step (state: state) =
     let open Puzzle in
-    let instr = Array.get state.bytecode state.offset in
+    let instr = state.bytecode.(state.offset) in
     Printf.printf "%d: %s\n" state.offset (string_of_instruction instr);
     match instr with
-    | Move -> { state with
-        position = move state.direction state.position;
-        offset = state.offset + 1;
-    }
+    | Move ->
+        let position = move state.direction state.position in
+        let stars = may_collect_star position state in
+        { state with position; stars; offset = state.offset + 1; }
     | Rotate rot -> { state with
         direction = rotate rot state.direction;
         offset = state.offset + 1;
@@ -125,16 +138,16 @@ let step (state: state) =
         | offset::stack -> { state with offset; stack; }
     )
     | SetColor color ->
-        let cell = get_cell state.position state.map in
-        cell := { !cell with color = Some color; };
+        (* if there was a star we already collected it *)
+        set_cell { color = Some color; star = false; } state.position state.map;
         { state with offset = state.offset + 1 }
     | Jump offset -> { state with offset; }
     | JumpIfNot (color, offset) ->
-        let cell = !(get_cell state.position state.map) in
+        let cell = get_cell state.position state.map in
         let offset = if cell.color <> Some color then offset
                      else state.offset + 1
         in { state with offset; }
-    | Exit -> failwith "exit"
+    | Exit -> { state with offset = Array.length state.bytecode }
     | Label _ -> failwith "label"
 
 
@@ -147,7 +160,7 @@ let is_out_of_map (state: state) =
     let (l, c) = state.position in
     l < 0 || m.height <= l ||
     c < 0 || m.width  <= c || (
-        let c = !(get_cell (l, c) m) in
+        let c = get_cell (l, c) m in
         match c.color with
         | None -> true
         | _ -> false
@@ -167,7 +180,7 @@ let draw offx offy cell_size (state: state) anim_steps anim_frame =
         let pos = ref (offx, offy) in
         for l = 0 to state.map.height - 1 do
             for c = 0 to state.map.width - 1 do
-                let e = !(get_cell (l, c) state.map) in
+                let e = get_cell (l, c) state.map in
                 Display.draw_cell !pos e.color;
                 if e.star then Display.draw_star !pos;
                 let (x, y) = !pos in pos := ((x + cell_size), y);

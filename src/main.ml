@@ -2,12 +2,12 @@ let rec run vm timeout =
     if timeout = 0 then ()
     else (
     Vm.draw 0 0 32 vm 0 0;
-    if Vm.is_out_of_instruction vm then ()
-    else if Vm.is_solved vm then (
+    if Vm.is_solved vm then (
         Display.draw_text (200, 200) "Success";
         Display.sync ();
         Display.delay 2_000
     )
+    else if Vm.is_out_of_instruction vm then ()
     else if Vm.is_out_of_map vm then (
         Display.draw_text (200, 200) "Failure";
         Display.sync ();
