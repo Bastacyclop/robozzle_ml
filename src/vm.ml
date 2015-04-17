@@ -1,21 +1,13 @@
-type rotation = Left | Right
-
-let string_of_rotation rot =
-    match rot with
-    | Left  -> "Left"
-    | Right -> "Right"
-
 (* bytecode offset *)
 type offset = int
 
 type instruction =
-    | Label of offset
     | Move
-    | Rotate of rotation
+    | Rotate of Puzzle.rotation
+    | Color of Puzzle.color
     | Call of offset
     | TailCall of offset
     | Return
-    | SetColor of Puzzle.color
     | Jump of offset
     | JumpIfNot of Puzzle.color * offset
     | Exit
@@ -23,13 +15,12 @@ type instruction =
 let string_of_instruction instr =
     let f = string_of_int in
     match instr with
-    | Label x -> "Label " ^ (f x)
     | Move -> "Move"
-    | Rotate rot -> "Rotate " ^ (string_of_rotation rot)
+    | Rotate rot -> "Rotate " ^ (Puzzle.string_of_rotation rot)
+    | Color c -> "Color " ^ (Puzzle.string_of_color c)
     | Call x -> "Call " ^ (f x)
     | TailCall x -> "TailCall " ^ (f x)
     | Return -> "Return"
-    | SetColor c -> "SetColor " ^ (Puzzle.string_of_color c)
     | Jump x -> "Jump " ^ (f x)
     | JumpIfNot (c, x) -> "JumpIfNot " ^ (Puzzle.string_of_color c) ^ " " ^ (f x)
     | Exit -> "Exit"
@@ -120,7 +111,7 @@ let may_collect_star position (state: state) =
 let step (state: state) =
     let open Puzzle in
     let instr = state.bytecode.(state.offset) in
-    Printf.printf "%d: %s\n" state.offset (string_of_instruction instr);
+    Printf.printf "> %d " state.offset;
     match instr with
     | Move ->
         let position = move state.direction state.position in
@@ -130,6 +121,10 @@ let step (state: state) =
         direction = rotate rot state.direction;
         offset = state.offset + 1;
     }
+    | Color color ->
+        (* if there was a star we already collected it *)
+        set_cell { color = Some color; star = false; } state.position state.map;
+        { state with offset = state.offset + 1 }
     | Call offset -> { state with offset; stack = state.offset::state.stack; }
     | TailCall offset -> { state with offset; }
     | Return -> (
@@ -137,10 +132,6 @@ let step (state: state) =
         | [] -> failwith "empty stack on return"
         | offset::stack -> { state with offset; stack; }
     )
-    | SetColor color ->
-        (* if there was a star we already collected it *)
-        set_cell { color = Some color; star = false; } state.position state.map;
-        { state with offset = state.offset + 1 }
     | Jump offset -> { state with offset; }
     | JumpIfNot (color, offset) ->
         let cell = get_cell state.position state.map in
@@ -148,7 +139,6 @@ let step (state: state) =
                      else state.offset + 1
         in { state with offset; }
     | Exit -> { state with offset = Array.length state.bytecode }
-    | Label _ -> failwith "label"
 
 
 let is_solved (state: state) =

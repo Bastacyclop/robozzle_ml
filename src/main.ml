@@ -20,22 +20,28 @@ let rec run vm timeout =
     )
 
 let () =
-    let puzzle = Puzzle.parse "puzzles/p644.rzl" in
-    let vm = Vm.init puzzle in
-    let vm = Vm.(set_bytecode [|
-        Move;
-        JumpIfNot(Puzzle.Green, 3);
-        Rotate Left;
-        JumpIfNot (Puzzle.Red, 6);
-        Rotate Right;
-        TailCall 7;
-        TailCall 0;
-        Move;
-        JumpIfNot(Puzzle.Green, 10);
-        Rotate Right;
-        TailCall 7;
-    |] vm)
-    in
+    let open Code in
+    let open Vm in
+    let open Puzzle in
+    let puzzle = parse "puzzles/p644.rzl" in
+    let prog = Program [
+        Definition ("f1", [
+            Move;
+            If (Green, Rotate Left);
+            If (Red, Rotate Right);
+            If (Red, Call "f2");
+            Call "f1";
+        ]);
+        Definition ("f2", [
+            Move;
+            If (Green, Rotate Right);
+            Call "f2";
+        ])
+    ] in
+    let bytecode = compile prog in
+    let vm = init puzzle |> set_bytecode bytecode in
+    Printf.printf "bytecode:\n";
+    Array.iteri (fun i e -> Printf.printf "%d: %s\n" i (string_of_instruction e)) bytecode;
     Display.init 600 600 32;
     run vm 500;
     Display.close ()

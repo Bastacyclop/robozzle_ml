@@ -3,6 +3,13 @@ type position = int * int
 let string_of_position (x, y) =
     "(" ^ (string_of_int x) ^ ", " ^ (string_of_int y) ^ ")"
 
+type rotation = Left | Right
+
+let string_of_rotation rot =
+    match rot with
+    | Left  -> "Left"
+    | Right -> "Right"
+
 type direction =
     | East
     | North

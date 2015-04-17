@@ -1,17 +1,13 @@
-type rotation = Left | Right
-val string_of_rotation: rotation -> string
-
 (* bytecode offset *)
 type offset = int
 
 type instruction =
-    | Label of offset
     | Move
-    | Rotate of rotation
+    | Rotate of Puzzle.rotation
+    | Color of Puzzle.color
     | Call of offset
     | TailCall of offset
     | Return
-    | SetColor of Puzzle.color
     | Jump of offset
     | JumpIfNot of Puzzle.color * offset
     | Exit

@@ -1,6 +1,9 @@
 type position = int * int
 val string_of_position: position -> string
 
+type rotation = Left | Right
+val string_of_rotation: rotation -> string
+
 type direction =
     | East
     | North

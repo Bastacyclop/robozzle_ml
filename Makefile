@@ -8,7 +8,7 @@ INTF := puzzle.cmi display.cmi vm.cmi
 
 all: $(TRGT)
 
-$(TRGT): puzzle.cmx display.cmx vm.cmx main.cmx
+$(TRGT): puzzle.cmx display.cmx vm.cmx code.cmx main.cmx
 	$(OL) -o $@ -package $(LIBS) -linkpkg $^
 
 %.cmx: $(SRCDIR)/%.ml $(INTF)
