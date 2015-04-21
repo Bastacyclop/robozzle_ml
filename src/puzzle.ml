@@ -62,6 +62,23 @@ type t = {
     map: map;
 }
 
+let print_list f l =
+    let open Printf in
+    match l with
+    | [] -> ()
+    | h::t ->
+        printf "%s" (f 0 h);
+        List.iteri (fun i e -> printf ", %s" (f (i + 1) e)) t
+
+let print_info puzzle =
+    let open Printf in
+    printf "---------- '%s' (%dx%d) ----------\n" puzzle.title puzzle.map.width puzzle.map.height;
+    printf "  spawn  : %s facing %s\n" (string_of_position puzzle.spawn_pos)
+                                       (string_of_direction puzzle.spawn_dir);
+    printf "functions: ";
+    print_list (fun i e -> sprintf "f%d |%d|" (i + 1) e) puzzle.fun_sizes;
+    printf "\n----------\n"
+
 let split = Str.split (Str.regexp ",")
 
 let decode_direction str =

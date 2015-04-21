@@ -13,17 +13,24 @@ type instruction =
     | Exit
 
 let string_of_instruction instr =
+    let open Puzzle in
     let f = string_of_int in
     match instr with
     | Move -> "Move"
-    | Rotate rot -> "Rotate " ^ (Puzzle.string_of_rotation rot)
-    | Color c -> "Color " ^ (Puzzle.string_of_color c)
+    | Rotate rot -> "Rotate " ^ (string_of_rotation rot)
+    | Color c -> "Color " ^ (string_of_color c)
     | Call x -> "Call " ^ (f x)
     | TailCall x -> "TailCall " ^ (f x)
     | Return -> "Return"
     | Jump x -> "Jump " ^ (f x)
-    | JumpIfNot (c, x) -> "JumpIfNot " ^ (Puzzle.string_of_color c) ^ " " ^ (f x)
+    | JumpIfNot (c, x) -> "JumpIfNot " ^ (string_of_color c) ^ " " ^ (f x)
     | Exit -> "Exit"
+
+type bytecode = instruction array
+
+let print_bytecode =
+    Array.iteri
+        (fun i e -> Printf.printf "%d: %s\n" i (string_of_instruction e))
 
 type state = {
     offset   : offset;
@@ -32,10 +39,11 @@ type state = {
     map      : Puzzle.map;
     position : Puzzle.position;
     direction: Puzzle.direction;
-    bytecode : instruction array;
+    bytecode : bytecode;
 }
 
-let cell_index (l, c) m = Puzzle.(l*m.width + c)
+let cell_index (l, c) m =
+    Puzzle.(l*m.width + c)
 
 let get_cell (l, c) (m: Puzzle.map): Puzzle.cell =
     Puzzle.(m.cells.(cell_index (l, c) m))
@@ -54,10 +62,7 @@ let count_stars (puzzle: Puzzle.t) =
     !acc
 
 let init (puzzle: Puzzle.t) =
-    let open Printf in
     let open Puzzle in
-    printf "spawn: %s - %s\n" (string_of_position puzzle.spawn_pos)
-                              (string_of_direction puzzle.spawn_dir);
     {
         offset = 0;
         stars = count_stars puzzle;
@@ -69,10 +74,7 @@ let init (puzzle: Puzzle.t) =
     }
 
 let set_bytecode bytecode (state: state) =
-    { state with bytecode; }
-
-(* TODO *)
-let init_stack id (state: state) = state
+    { state with bytecode; stack = [(Array.length bytecode) - 1] }
 
 let move dir (l, c) =
     let open Puzzle in
@@ -111,7 +113,6 @@ let may_collect_star position (state: state) =
 let step (state: state) =
     let open Puzzle in
     let instr = state.bytecode.(state.offset) in
-    Printf.printf "> %d " state.offset;
     match instr with
     | Move ->
         let position = move state.direction state.position in
@@ -138,7 +139,7 @@ let step (state: state) =
         let offset = if cell.color <> Some color then offset
                      else state.offset + 1
         in { state with offset; }
-    | Exit -> { state with offset = Array.length state.bytecode }
+    | Exit -> state
 
 
 let is_solved (state: state) =
@@ -157,8 +158,7 @@ let is_out_of_map (state: state) =
     )
 
 let is_out_of_instruction (state: state) =
-    let len = Array.length state.bytecode in
-    state.offset >= len
+    state.bytecode.(state.offset) = Exit
 
 let get_pos (state: state) = state.position
 let get_map (state: state) = state.map
@@ -182,8 +182,7 @@ let draw offx offy cell_size (state: state) anim_steps anim_frame =
         let (rl, rc) = state.position in
         let rx = offx + rc*cell_size in
         let ry = offy + rl*cell_size in
-        Display.draw_robot (rx, ry) state.direction 0
+        Display.draw_robot (rx, ry) state.direction anim_frame
     in
     draw_cells ();
-    draw_robot ();
-    Display.sync ()
+    draw_robot ()

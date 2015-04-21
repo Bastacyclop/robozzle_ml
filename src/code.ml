@@ -50,10 +50,14 @@ let compile prog =
     let rev_precompile_definition d =
         let Definition (symbol, instrs) = d in
         incr label_count;
-        List.fold_left
+        incr instr_count;
+        let res =
+            List.fold_left
             (fun acc i -> List.rev_append (precompile_instruction i) acc)
             [Label symbol]
             instrs
+        in
+        Return::res
     in
     let precompile prog =
         let Program defs = prog in

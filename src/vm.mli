@@ -13,6 +13,9 @@ type instruction =
     | Exit
 val string_of_instruction: instruction -> string
 
+type bytecode = instruction array
+val print_bytecode: bytecode -> unit
+
 type state = {
     offset   : offset;
     stars    : int;
@@ -20,12 +23,11 @@ type state = {
     map      : Puzzle.map;
     position : Puzzle.position;
     direction: Puzzle.direction;
-    bytecode : instruction array;
+    bytecode : bytecode
 }
 
 val init: Puzzle.t -> state
-val set_bytecode: instruction array -> state -> state
-val init_stack: int -> state -> state
+val set_bytecode: bytecode -> state -> state
 
 val step: state -> state
 

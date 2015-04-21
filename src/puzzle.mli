@@ -38,6 +38,7 @@ type t = {
     fun_sizes: int list;
     map: map;
 }
+val print_info: t -> unit
 
 (* parse file_path *)
 val parse: string -> t

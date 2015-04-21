@@ -1,47 +1,66 @@
-let rec run vm timeout =
-    if timeout = 0 then ()
-    else (
-    Vm.draw 0 0 32 vm 0 0;
-    if Vm.is_solved vm then (
-        Display.draw_text (200, 200) "Success";
-        Display.sync ();
-        Display.delay 2_000
-    )
-    else if Vm.is_out_of_instruction vm then ()
-    else if Vm.is_out_of_map vm then (
-        Display.draw_text (200, 200) "Failure";
-        Display.sync ();
-        Display.delay 2_000
-    )
-    else (
-        Display.delay 50;
-        run (Vm.step vm) (timeout - 1)
-    )
-    )
-
 let () =
-    let open Code in
-    let open Vm in
-    let open Puzzle in
-    let puzzle = parse "puzzles/p644.rzl" in
-    let prog = Program [
-        Definition ("f1", [
-            Move;
-            If (Green, Rotate Left);
-            If (Red, Rotate Right);
-            If (Red, Call "f2");
-            Call "f1";
-        ]);
-        Definition ("f2", [
-            Move;
-            If (Green, Rotate Right);
-            Call "f2";
-        ])
-    ] in
-    let bytecode = compile prog in
-    let vm = init puzzle |> set_bytecode bytecode in
-    Printf.printf "bytecode:\n";
-    Array.iteri (fun i e -> Printf.printf "%d: %s\n" i (string_of_instruction e)) bytecode;
+    let cell_size = 32 in
+    let puzzle = Puzzle.parse "puzzles/p644.rzl" in
+    Puzzle.print_info puzzle;
+
+    let editor = Editor.init puzzle in
+    Editor.print_info ();
+    let draw_editor editor =
+        let open Puzzle in
+        Editor.draw (50, 50 + cell_size*puzzle.map.height) cell_size editor;
+    in
+
+    flush stdout;
+
+    let vm = Vm.init puzzle in
+    let draw_vm vm =
+        Vm.draw 0 0 cell_size vm 0 0;
+    in
+
+    let rec edit () =
+        Events.handle () ~on_key_pressed:(fun k ->
+            let open Sdlkey in
+            match k with
+            | KEY_RETURN -> run ()
+            | _ -> Editor.update editor k
+        );
+        if not (Events.should_quit ()) then (
+            Display.clear ();
+            draw_vm vm;
+            draw_editor editor;
+            Display.sync ();
+            edit ()
+        )
+    and run () =
+        let prog = Editor.get_code editor in
+        let bytecode = Code.compile prog in
+        Printf.printf "bytecode:\n";
+        Vm.print_bytecode bytecode;
+        let rec iter vm =
+            Events.handle ();
+            if not (Events.should_quit ()) then (
+                Display.clear ();
+                draw_vm vm;
+                Printf.printf "-%d" vm.Vm.offset;
+                if Vm.is_solved vm then (
+                    Display.draw_text (200, 200) "Success";
+                    Display.sync ();
+                    Events.wait_key (fun _ -> Some ())
+                ) else if Vm.is_out_of_instruction vm
+                     || Vm.is_out_of_map vm then (
+                    Display.draw_text (200, 200) "Failure";
+                    Display.sync ();
+                    Events.wait_key (fun _ -> Some ())
+                ) else (
+                    Display.sync ();
+                    Display.delay 50;
+                    iter (Vm.step vm)
+                );
+            );
+            flush stdout
+        in
+        iter (Vm.set_bytecode bytecode vm)
+    in
     Display.init 600 600 32;
-    run vm 500;
+    edit ();
     Display.close ()
