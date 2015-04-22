@@ -27,6 +27,7 @@ type state = {
 }
 
 val init: Puzzle.t -> state
+val copy: state -> state
 val set_bytecode: bytecode -> state -> state
 
 val step: state -> state
@@ -39,5 +40,5 @@ val get_pos: state -> Puzzle.position
 val get_map: state -> Puzzle.map
 val get_dir: state -> Puzzle.direction
 
-(* draw offx offy cell_size state anim_steps anim_frame *)
-val draw : int -> int -> int -> state -> int -> int -> unit
+(* draw pos cell_size state anim_steps anim_frame *)
+val draw : Display.position -> int -> state -> int -> int -> unit

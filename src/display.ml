@@ -51,6 +51,9 @@ let close () =
 let clear () =
     Sdlvideo.fill_rect !screen (Sdlvideo.map_RGB !screen Sdlvideo.black)
 
+let sync () =
+    Sdlvideo.flip !screen
+
 let blit_sprite ((x,y): position) (idx: int) (idy: int) =
     Sdlvideo.blit_surface
         ~src: !sprites
@@ -129,9 +132,6 @@ let draw_text ((x,y): position) (s: string) =
         ~dst: !screen
         ~dst_rect: (Sdlvideo.rect x y 0 0)
         ()
-
-let sync () =
-    Sdlvideo.flip !screen
 
 let delay ms =
     Sdltimer.delay ms

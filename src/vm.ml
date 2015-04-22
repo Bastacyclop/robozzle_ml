@@ -73,6 +73,10 @@ let init (puzzle: Puzzle.t) =
         bytecode = [||];
     }
 
+let copy (state:state) =
+    let open Puzzle in
+    { state with map = { state.map with cells = Array.copy state.map.cells; }; }
+
 let set_bytecode bytecode (state: state) =
     { state with bytecode; stack = [(Array.length bytecode) - 1] }
 
@@ -126,7 +130,7 @@ let step (state: state) =
         (* if there was a star we already collected it *)
         set_cell { color = Some color; star = false; } state.position state.map;
         { state with offset = state.offset + 1 }
-    | Call offset -> { state with offset; stack = state.offset::state.stack; }
+    | Call offset -> { state with offset; stack = (state.offset + 1)::state.stack; }
     | TailCall offset -> { state with offset; }
     | Return -> (
         match state.stack with
@@ -164,10 +168,10 @@ let get_pos (state: state) = state.position
 let get_map (state: state) = state.map
 let get_dir (state: state) = state.direction
 
-let draw offx offy cell_size (state: state) anim_steps anim_frame =
+let draw (off_x, off_y) cell_size (state: state) anim_steps anim_frame =
     let open Puzzle in
     let draw_cells () =
-        let pos = ref (offx, offy) in
+        let pos = ref (off_x, off_y) in
         for l = 0 to state.map.height - 1 do
             for c = 0 to state.map.width - 1 do
                 let e = get_cell (l, c) state.map in
@@ -175,13 +179,13 @@ let draw offx offy cell_size (state: state) anim_steps anim_frame =
                 if e.star then Display.draw_star !pos;
                 let (x, y) = !pos in pos := ((x + cell_size), y);
             done;
-            let (x, y) = !pos in pos := (0, (y + cell_size));
+            let (x, y) = !pos in pos := (off_x, (y + cell_size));
         done;
     in
     let draw_robot () =
         let (rl, rc) = state.position in
-        let rx = offx + rc*cell_size in
-        let ry = offy + rl*cell_size in
+        let rx = off_x + rc*cell_size in
+        let ry = off_y + rl*cell_size in
         Display.draw_robot (rx, ry) state.direction anim_frame
     in
     draw_cells ();

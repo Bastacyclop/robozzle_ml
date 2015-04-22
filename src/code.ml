@@ -27,12 +27,14 @@ type precompiled_instruction =
 
 let compile prog =
     let instr_count = ref 0 in
-    let label_count = ref 0 in
-    let label_prefix = "__" in
-    let gen_label () =
-        let label = label_prefix ^ (string_of_int !label_count) in
-        incr label_count;
-        label
+    let gen_label =
+        let next = ref 0 in
+        let prefix = "__" in
+        (fun () ->
+            let label = prefix ^ (string_of_int !next) in
+            incr next;
+            label
+        )
     in
     let rec precompile_instruction (instr: instruction): precompiled_instruction list =
         incr instr_count;
@@ -49,7 +51,6 @@ let compile prog =
     in
     let rev_precompile_definition d =
         let Definition (symbol, instrs) = d in
-        incr label_count;
         incr instr_count;
         let res =
             List.fold_left
