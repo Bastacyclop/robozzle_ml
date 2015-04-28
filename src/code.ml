@@ -45,8 +45,7 @@ let compile prog =
         | If (color, instr) ->
             let label = gen_label () in
             let prec = precompile_instruction instr in
-            let precs = [Label label] |> List.append prec in
-            (JumpIfNot (color, label))::precs
+            (JumpIfNot (color, label))::(prec @ [Label label])
         | Call symbol -> [Call symbol]
     in
     let rev_precompile_definition d =
@@ -72,7 +71,7 @@ let compile prog =
     let offset = ref 0 in
     let labels =
         List.fold_left
-        (fun labels p_d ->
+        (fun labels pre_def ->
             List.fold_left
             (fun labels pre_instr ->
                 match pre_instr with
@@ -80,7 +79,7 @@ let compile prog =
                 | _ -> incr offset; labels
             )
             labels
-            p_d
+            pre_def
         )
         LabelMap.empty
         precompiled_defs

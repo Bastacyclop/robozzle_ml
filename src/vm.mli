@@ -23,7 +23,8 @@ type state = {
     map      : Puzzle.map;
     position : Puzzle.position;
     direction: Puzzle.direction;
-    bytecode : bytecode
+    bytecode : bytecode;
+    moved    : bool;
 }
 
 val init: Puzzle.t -> state
@@ -36,9 +37,7 @@ val is_solved: state -> bool
 val is_out_of_map: state -> bool
 val is_out_of_instruction: state -> bool
 
-val get_pos: state -> Puzzle.position
-val get_map: state -> Puzzle.map
-val get_dir: state -> Puzzle.direction
-
-(* draw pos cell_size state anim_steps anim_frame *)
-val draw : Display.position -> int -> state -> int -> int -> unit
+(* draw p cell_size s *)
+val draw: Display.position -> int -> state -> unit
+(* may_animate draw_env p cell_size s *)
+val may_animate: (unit -> unit) -> Display.position -> int -> state -> unit

@@ -5,17 +5,19 @@ let () =
 
     let editor = Editor.init puzzle in
     Editor.print_info ();
-    let draw_editor editor =
-        let open Puzzle in
-        Editor.draw (cell_size, cell_size + cell_size*puzzle.map.height)
-                    cell_size editor;
-    in
 
     flush stdout;
 
     let vm = Vm.init puzzle in
-    let draw_vm vm =
-        Vm.draw (0, 0) cell_size vm 0 0;
+
+    let draw vm editor =
+        let open Puzzle in
+        Vm.draw (0, 0) cell_size vm;
+        Editor.draw (cell_size, cell_size + cell_size*puzzle.map.height)
+                    cell_size editor;
+    in
+    let may_animate vm editor =
+        Vm.may_animate (fun () -> draw vm editor) (0, 0) cell_size vm;
     in
 
     let rec edit () =
@@ -27,8 +29,7 @@ let () =
         );
         if not (Events.should_quit ()) then (
             Display.clear ();
-            draw_vm vm;
-            draw_editor editor;
+            draw vm editor;
             Display.sync ();
             edit ()
         )
@@ -47,9 +48,11 @@ let () =
             );
             if not (!abort || Events.should_quit ()) then (
                 Display.clear ();
-                draw_vm vm;
+                draw vm editor;
                 Printf.printf "-%d" vm.Vm.offset;
                 flush stdout;
+                Display.sync ();
+                may_animate vm editor;
                 if Vm.is_solved vm then (
                     Display.draw_text (200, 200) "Success";
                     Display.sync ();
@@ -60,8 +63,6 @@ let () =
                     Display.sync ();
                     Events.wait_key (fun _ -> Some ())
                 ) else (
-                    Display.sync ();
-                    Display.delay 50;
                     iter (Vm.step vm)
                 );
             );

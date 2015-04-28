@@ -40,6 +40,7 @@ type state = {
     position : Puzzle.position;
     direction: Puzzle.direction;
     bytecode : bytecode;
+    moved    : bool;
 }
 
 let cell_index (l, c) m =
@@ -57,7 +58,7 @@ let count_stars (puzzle: Puzzle.t) =
     let acc = ref 0 in
     for i = 0 to (map.width*map.height) - 1 do
         let e = map.cells.(i) in
-        if e.star then acc := !acc + 1
+        if e.star then incr acc;
     done;
     !acc
 
@@ -71,6 +72,7 @@ let init (puzzle: Puzzle.t) =
         position = puzzle.spawn_pos;
         direction = puzzle.spawn_dir;
         bytecode = [||];
+        moved = false;
     }
 
 let copy (state:state) =
@@ -117,7 +119,7 @@ let may_collect_star position (state: state) =
 let step (state: state) =
     let open Puzzle in
     let instr = state.bytecode.(state.offset) in
-    match instr with
+    let s = match instr with
     | Move ->
         let position = move state.direction state.position in
         let stars = may_collect_star position state in
@@ -144,6 +146,10 @@ let step (state: state) =
                      else state.offset + 1
         in { state with offset; }
     | Exit -> state
+    in
+    match instr with
+    | Move -> { s with moved = true; }
+    | _ -> { s with moved = false; }
 
 
 let is_solved (state: state) =
@@ -164,29 +170,69 @@ let is_out_of_map (state: state) =
 let is_out_of_instruction (state: state) =
     state.bytecode.(state.offset) = Exit
 
-let get_pos (state: state) = state.position
-let get_map (state: state) = state.map
-let get_dir (state: state) = state.direction
+let draw_cell pos loc (state: state) =
+    let open Puzzle in
+    let e = get_cell loc state.map in
+    Display.draw_cell pos e.color;
+    if e.star then Display.draw_star pos
 
-let draw (off_x, off_y) cell_size (state: state) anim_steps anim_frame =
+let puzzle_to_display loc (off_x, off_y) cell_size =
+    let (l, c) = loc in
+    (off_x + c*cell_size, off_y + l*cell_size)
+
+let draw (off_x, off_y) cell_size (state: state) =
     let open Puzzle in
     let draw_cells () =
         let pos = ref (off_x, off_y) in
         for l = 0 to state.map.height - 1 do
             for c = 0 to state.map.width - 1 do
-                let e = get_cell (l, c) state.map in
-                Display.draw_cell !pos e.color;
-                if e.star then Display.draw_star !pos;
+                draw_cell !pos (l, c) state;
                 let (x, y) = !pos in pos := ((x + cell_size), y);
             done;
             let (x, y) = !pos in pos := (off_x, (y + cell_size));
         done;
     in
     let draw_robot () =
-        let (rl, rc) = state.position in
-        let rx = off_x + rc*cell_size in
-        let ry = off_y + rl*cell_size in
-        Display.draw_robot (rx, ry) state.direction anim_frame
+        if not state.moved then (
+            let pos = puzzle_to_display state.position (off_x, off_y) cell_size in
+            Display.draw_robot pos state.direction 0
+        )
     in
     draw_cells ();
     draw_robot ()
+
+let anim_steps = 7
+
+let may_animate draw_env (off_x, off_y) cell_size (state: state) =
+    let open Puzzle in
+    if state.moved then (
+        draw_env ();
+        let end_loc = state.position in
+        let (end_x, end_y) =
+            puzzle_to_display end_loc (off_x, off_y) cell_size in
+        let (move_l, move_c) =
+            match state.direction with
+            | North -> (-1,  0)
+            | West  -> ( 0, -1)
+            | South -> ( 1,  0)
+            | East  -> ( 0,  1)
+        in
+        let beg_loc = let (e_l, e_c) = end_loc in (e_l - move_l, e_c - move_c) in
+        let (move_x, move_y) = (move_c*cell_size, move_l*cell_size) in
+        let (beg_x, beg_y) = (end_x - move_x, end_y - move_y) in
+        let clear () =
+            draw_cell (beg_x, beg_y) beg_loc state;
+            draw_cell (end_x, end_y) end_loc state
+        in
+        let pos = ref (beg_x, beg_y) in
+        let (step_x, step_y) = (move_x / anim_steps, move_y / anim_steps) in
+        Time.do_n_every
+            (fun i ->
+                clear ();
+                Display.draw_robot !pos state.direction (i - 1);
+                Display.sync ();
+                let (x, y) = !pos in pos := (x + step_x, y + step_y);
+            )
+            (anim_steps + 1)
+            0.06;
+    ) else Display.sync ()
